@@ -18,6 +18,32 @@ different piece of work, and the user should know that before they judge the out
 
 ---
 
+## The shape of the job: survey first, decide only if something is missing
+
+```
+SURVEY          Phase 0-3   read the prompt, audit nodes, locate models, check assets
+  │
+  ├─ all clear ──────────────►  Phase 4 convert (often nothing to convert)
+  │                             Phase 5 verify  ──►  Phase 6 hand the result over
+  │                             ZERO questions asked
+  │
+  └─ something missing ──────►  ⛔️ that specific decision point, and only that one
+                                then rejoin the line above
+```
+
+🚨 **The decision points are branches, not gates.** If every node is present, every
+model is local and every asset is accounted for, **there is nothing to decide** — go
+straight to verification and run it.
+
+**Do not manufacture decisions to walk the user through.** A workflow that lands with
+no questions asked is the best outcome, not a sign you skipped something. Ask only when
+the survey actually turned up a gap, and ask about *that gap*.
+
+The one question that survives a clean survey is the last one — the acceptance standard
+in Phase 6 — and even that is skippable when the user only asked "make it run".
+
+---
+
 ## Phase 0 — Read the prompt first. It is the spec.
 
 **Before touching nodes, read every text widget in the graph.** The prompt tells you

@@ -56,9 +56,23 @@ Nothing to install. Start a project and drop `SKILL.md` into it.
 
 ## What actually happens after you hand over a workflow
 
-Landing a workflow is **six phases**. Most of it the agent does alone; **three points
-are yours** and it should stop and ask. Knowing where those are means you can walk away
-for the rest.
+Landing a workflow is **six phases**, and the first four are a survey. What happens next
+depends entirely on what the survey finds:
+
+```
+SURVEY  (Phase 0-3)
+  │
+  ├─ everything present ────►  convert → verify → done.   NO questions asked
+  │
+  └─ something missing ─────►  ⛔️ that one decision comes to you, then it carries on
+```
+
+🚨 **The three decision points below are branches, not gates.** If every node is present,
+every model is already on your machine and no assets are missing, **the agent should ask
+you nothing at all** — it goes straight to verification and runs it. A workflow that
+lands with zero questions is the best outcome, not a sign something was skipped.
+
+So read the phases below as *"if this comes up"*, not *"this will happen"*.
 
 ### Phase 0 · Read the prompt  ·  *seconds*
 
