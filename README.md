@@ -54,6 +54,100 @@ Nothing to install. Start a project and drop `SKILL.md` into it.
 
 ---
 
+## What actually happens after you hand over a workflow
+
+Landing a workflow is **six phases**. Most of it the agent does alone; **three points
+are yours** and it should stop and ask. Knowing where those are means you can walk away
+for the rest.
+
+### Phase 0 · Read the prompt  ·  *seconds*
+
+The agent reads every text widget before touching anything. You get told:
+
+- how many reference images are genuinely in use (a graph may wire nine slots and use three)
+- what role each one plays — identity / scene / antagonist / style
+- whether the prompt was written for **this** model, or carried over from another one
+- whether the requested duration and shot count are achievable on this graph
+
+📌 This is also where you find out that a 30-second prompt is going to be compressed
+into whatever the graph actually produces — **before** you spend GPU time on it.
+
+### Phase 1 · Node audit  ·  *a minute*
+
+Every node type is checked against four layers: **built-in → installed package →
+package behind upstream → genuinely absent.** You get a list sorted into those buckets,
+with platform-locked nodes (`RH_*`, encrypted) flagged as **cannot be landed at all**.
+
+> ⛔️ **Decision 1 of 3** — if a node needs the installed package to be *updated*, the
+> agent stops. Updating can change results in workflows you already depend on, so that
+> is not its call to make.
+
+### Phase 2 · Find the models  ·  *minutes to hours, depending on download size*
+
+For each missing model or LoRA: API search → web search → hand back. Everything
+downloaded is verified by reading the `safetensors` header, not by file size.
+
+> ⛔️ **Decision 2 of 3** — when both search routes fail, you get the filename, the
+> nearest existing candidates, and what differs between them. Whether a one-suffix
+> difference is a re-quantisation (must match) or just the author's naming (safe to
+> swap) is a judgement you are better qualified to make.
+
+### Phase 3 · Assets and dead wiring  ·  *a minute*
+
+The author's uploaded images and videos arrive as hash filenames and **cannot be
+recovered**. You supply substitutes — matched to the roles Phase 0 identified.
+
+> ⛔️ **Decision 3 of 3** — cloud graphs usually carry unconnected nodes and empty
+> loaders. The agent asks whether to remove them or mute and keep them, because they
+> often show how the author intended the graph to scale.
+
+### Phase 4 · Convert  ·  *seconds*
+
+A landed copy of the JSON is written — nodes swapped, values repointed, substitutes
+wired in, dead nodes muted. **Your original file is never modified.** You get a count of
+every change made.
+
+### Phase 5 · Verify in three layers  ·  *minutes, plus one generation*
+
+```
+① programmatic check   nodes, model filenames, asset files, numeric ranges
+② load in a browser    the real UI reports its own missing nodes and empty dropdowns
+③ press Queue          execution
+```
+
+Each layer finds what the previous one could not. Expect the agent to go back and fix
+things twice here — that is the procedure working, not failing.
+
+### Phase 6 · Acceptance  ·  *yours*
+
+You get the output, plus a line-by-line comparison against the prompt **in counts, not
+adjectives**: "the prompt names 5 actions; 3 are identifiable on screen."
+
+Then the agent stops, because the remaining question is not one it can answer: **is this
+the effect the workflow was built for?** Nothing in the JSON says what "good" looks like
+here, and a metric picked to fill that gap will point the wrong way with full confidence.
+It will ask you for a reference, or simply ask you to look.
+
+---
+
+### What you end up with
+
+```
+a landed workflow.json     runs on your machine, your original untouched
+a list of substitutions    what is no longer the author's, and how it differs
+the models and nodes       verified complete, with sources recorded
+an honest report           including the parts the agent could not judge
+```
+
+### Roughly how long
+
+For a 67-node workflow with a 15-LoRA chain, the audit and conversion took about
+**twenty minutes of back-and-forth**; the bulk of the wall-clock time was a 19.5 GB base
+model download and the generation itself. **The three decision points were the only
+moments a human was needed.**
+
+---
+
 ## Why the procedure is shaped this way
 
 Every step below exists because skipping it produces a specific, recognisable failure.
