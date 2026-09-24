@@ -1,6 +1,6 @@
 ---
 name: comfy-workflow-landing
-description: Land someone else's ComfyUI workflow on a local machine — a cloud or shared workflow.json that will not run as-is. Use when given a workflow JSON to "make it work here", when a workflow shows red nodes or empty dropdowns, when auditing which models and LoRAs a workflow needs, or when a workflow loads cleanly but errors the moment Queue is pressed. This is a procedure, not a tool: no scripts ship with it.
+description: Land someone else's ComfyUI workflow on a local machine — a cloud or shared workflow.json that will not run as-is. Use when given a workflow JSON to "make it work here", when a workflow shows red nodes or empty dropdowns, when auditing which models and LoRAs a workflow needs, or when a workflow loads cleanly but errors the moment Queue is pressed. This is a procedure rather than a tool, and no scripts ship with it.
 ---
 
 # Landing a Workflow
