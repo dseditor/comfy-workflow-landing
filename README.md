@@ -56,23 +56,30 @@ Nothing to install. Start a project and drop `SKILL.md` into it.
 
 ## What actually happens after you hand over a workflow
 
-Landing a workflow is **six phases**, and the first four are a survey. What happens next
-depends entirely on what the survey finds:
+Landing a workflow is **a survey, then at most one conversation, then a run.**
 
 ```
-SURVEY  (Phase 0-3)
-  │
-  ├─ everything present ────►  convert → verify → done.   NO questions asked
-  │
-  └─ something missing ─────►  ⛔️ that one decision comes to you, then it carries on
+SURVEY  (Phase 0-3)     reads everything, changes nothing, downloads nothing
+  |
+  +-- nothing missing ------------------------->  convert & verify.  NO questions asked
+  |
+  +-- gaps found --->  ONE report, ONE decision (Phase 4)
+                       every gap, what exists where, the options, the RISK
+                       you pick what to act on - possibly none
+                            |
+                            +------------------>  convert & verify
 ```
 
-🚨 **The three decision points below are branches, not gates.** If every node is present,
-every model is already on your machine and no assets are missing, **the agent should ask
-you nothing at all** — it goes straight to verification and runs it. A workflow that
-lands with zero questions is the best outcome, not a sign something was skipped.
+**The survey is read-only and it asks you nothing.** It does not stop at the first
+missing node, ask, then stop again at the first missing model. It finishes, then puts
+everything in front of you at once — because seeing all the gaps together is what lets
+you say "do those two, skip the rest". You cannot make that call one gap at a time.
 
-So read the phases below as *"if this comes up"*, not *"this will happen"*.
+**Nothing is downloaded or installed before you agree.** A 20 GB model does not start
+transferring because an agent decided it would be helpful.
+
+So read the phases below as *"if this comes up"*, not *"this will happen"*. **A workflow
+that lands with zero questions asked is the normal good case.**
 
 ### Phase 0 · Read the prompt  ·  *seconds*
 
@@ -92,36 +99,65 @@ Every node type is checked against four layers: **built-in → installed package
 package behind upstream → genuinely absent.** You get a list sorted into those buckets,
 with platform-locked nodes (`RH_*`, encrypted) flagged as **cannot be landed at all**.
 
-> ⛔️ **Decision 1 of 3** — if a node needs the installed package to be *updated*, the
-> agent stops. Updating can change results in workflows you already depend on, so that
-> is not its call to make.
+> 📋 Anything not simply present is **recorded and carried to Phase 4** — the survey does
+> not stop to ask. The one exception it may act on alone is an exact built-in equivalent,
+> because swapping a third-party `Float` for the built-in `Float` changes nothing you
+> would want a say in.
 
-### Phase 2 · Find the models  ·  *minutes to hours, depending on download size*
+### Phase 2 · Locate the models (find, do not fetch)  ·  *minutes*
 
 For each missing model or LoRA: API search → web search → hand back. Everything
 downloaded is verified by reading the `safetensors` header, not by file size.
 
-> ⛔️ **Decision 2 of 3** — when both search routes fail, you get the filename, the
-> nearest existing candidates, and what differs between them. Whether a one-suffix
-> difference is a re-quantisation (must match) or just the author's naming (safe to
-> swap) is a judgement you are better qualified to make.
+> 📋 **Locating a file is survey work; fetching it is not.** Nothing downloads at this
+> stage. You get the filename, the size, where it was found — or that neither route
+> found it — and the nearest candidates, all in the Phase 4 report.
 
 ### Phase 3 · Assets and dead wiring  ·  *a minute*
 
 The author's uploaded images and videos arrive as hash filenames and **cannot be
 recovered**. You supply substitutes — matched to the roles Phase 0 identified.
 
-> ⛔️ **Decision 3 of 3** — cloud graphs usually carry unconnected nodes and empty
-> loaders. The agent asks whether to remove them or mute and keep them, because they
-> often show how the author intended the graph to scale.
+> 📋 Cloud graphs usually carry unconnected nodes and empty loaders. They are listed,
+> not deleted — they often show how the author intended the graph to scale. The
+> recommendation will be to mute rather than remove, but it goes in the report.
 
-### Phase 4 · Convert  ·  *seconds*
+### Phase 4 · One report, one decision  ·  *only if the survey found gaps*
+
+Everything the survey found arrives at once, in one shape per gap:
+
+```
+what is missing      exact name, where it is referenced, what it does
+is it out there      found at <source>, size N GB  /  neither route found it
+what is here now      already local / behind by N commits / not present
+options              A, B, C - with what each costs
+risk to your setup   <- the column you actually decide on
+```
+
+**Risk is ranked by what it touches, not by how much work it is:**
+
+| Risk | Touches | Examples |
+|---|---|---|
+| **None** | nothing existing | swap to a built-in - edit the workflow copy - mute dead nodes |
+| **Low** | disk and time | download a model: adds files, changes nothing already running |
+| **Medium** | adds a dependency | install a new node package: may conflict, needs maintaining |
+| **HIGH** | **what already works** | update an installed package - update ComfyUI itself - replace a shared model |
+
+🔴 That last row is the one to read carefully. If you have pipelines running on that
+package today, an update can change their output without any error. The report should
+say so, and say what would need re-checking afterwards.
+
+You answer **selectively** — "download those two, skip the package update, I will find
+the third myself" is a normal answer. So is **"do none of it"**: knowing a workflow needs
+20 GB and a risky update is sometimes enough to decide it is not worth landing.
+
+### Phase 5 · Convert  ·  *seconds*
 
 A landed copy of the JSON is written — nodes swapped, values repointed, substitutes
 wired in, dead nodes muted. **Your original file is never modified.** You get a count of
 every change made.
 
-### Phase 5 · Verify in three layers  ·  *minutes, plus one generation*
+### Phase 5b · Verify in three layers  ·  *minutes, plus one generation*
 
 ```
 ① programmatic check   nodes, model filenames, asset files, numeric ranges

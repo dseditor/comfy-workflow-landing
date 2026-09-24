@@ -18,29 +18,34 @@ different piece of work, and the user should know that before they judge the out
 
 ---
 
-## The shape of the job: survey first, decide only if something is missing
+## The shape of the job: survey read-only, then one decision
 
 ```
-SURVEY          Phase 0-3   read the prompt, audit nodes, locate models, check assets
-  │
-  ├─ all clear ──────────────►  Phase 4 convert (often nothing to convert)
-  │                             Phase 5 verify  ──►  Phase 6 hand the result over
-  │                             ZERO questions asked
-  │
-  └─ something missing ──────►  ⛔️ that specific decision point, and only that one
-                                then rejoin the line above
+SURVEY   Phase 0-3    read the prompt / audit nodes / locate models / check assets
+                      change nothing, download nothing, ask nothing yet
+  |
+  +-- nothing missing ------------------------------->  Phase 5 convert & verify
+  |                                                      ZERO questions asked
+  |
+  +-- gaps found --->  Phase 4  ONE report, ONE decision
+                       every gap, what exists where, the options, and the RISK
+                       the user picks which to act on - possibly none
+                            |
+                            +------------------------->  Phase 5 convert & verify
 ```
 
-🚨 **The decision points are branches, not gates.** If every node is present, every
-model is local and every asset is accounted for, **there is nothing to decide** — go
-straight to verification and run it.
+**Survey completely before asking anything.** Do not stop at the first missing node to
+ask, then stop again at the first missing model. That interrupts the user three times
+and each time they see only a fragment. Finish the whole survey, then present everything
+at once: seeing all the gaps together, a user may act on two and drop the rest, or
+abandon the workflow entirely. They cannot make that judgement one gap at a time.
 
-**Do not manufacture decisions to walk the user through.** A workflow that lands with
-no questions asked is the best outcome, not a sign you skipped something. Ask only when
-the survey actually turned up a gap, and ask about *that gap*.
+**The survey is read-only.** No downloads, no installs, no edits to the JSON until the
+user has decided. Downloading 20 GB before asking is not helpfulness; it removes their
+choice.
 
-The one question that survives a clean survey is the last one — the acceptance standard
-in Phase 6 — and even that is skippable when the user only asked "make it run".
+**Do not manufacture decisions.** A workflow that lands with zero questions is the best
+outcome, not a sign you skipped something. Ask only about gaps the survey actually found.
 
 ---
 
@@ -136,16 +141,15 @@ encrypted nodes    obfuscated or licence-gated
 **These cannot be landed.** They only run on that platform. Tell the user plainly which
 ones they are, and that the workflow needs structural replacement, not a download.
 
-### ⛔️ DECISION POINT — the node is genuinely absent
+### Record, do not ask yet
 
-Stop and present the options; do not decide alone:
+For each node that is not simply present, record which bucket it falls in and what the
+options are. **Carry it to Phase 4** - do not stop the survey to ask.
 
-| Option | What to say |
-|---|---|
-| **A. Built-in equivalent** | "X does <what>; built-in Y does the same." Do this without asking when the match is exact |
-| **B. Update the installed package** | "It exists upstream; we are N commits behind. ⚠️ current production runs on this package — updating could change results." Ask first. Some authors update cumulatively and do not break old paths, but **verify by checking that the nodes you depend on still exist after pulling** — do not take it on faith |
-| **C. Install a new package** | Last resort. State what it adds and what it risks |
-| **D. Rebuild that part of the graph** | For trivial logic nodes this is often cheapest: compute the value and hard-code it |
+An exact built-in equivalent is the one case you may act on without asking: swapping a
+third-party `Float` for the built-in `Float` changes nothing the user would want a say
+in. Everything else - updating a package, installing one, restructuring the graph -
+goes into the report.
 
 ---
 
@@ -188,9 +192,14 @@ only fails at load time, with an error that never mentions downloading.
 
 Read `__metadata__` too: a base-model field confirms the file is even for this model.
 
-### ⛔️ DECISION POINT — a model cannot be found anywhere
+### Record, do not download yet
 
-Give the user the facts and the options, and let them choose:
+Locating a file is survey work. **Fetching it is not** - that is the user's call,
+because it costs their bandwidth, their disk and sometimes their money. Record for each
+missing model: the exact filename, where it was found (or that neither route found it),
+the file size, and the nearest alternatives. **Carry it to Phase 4.**
+
+When you do report it, give the user the facts and the options:
 
 1. **What exactly is missing** — full filename, where it is referenced, what it does
 2. **The nearest things that do exist** — with the differences named. One suffix apart
@@ -223,22 +232,66 @@ directly.**
 helper families. A checker doing `if not isinstance(w, list): continue` silently skips
 every dict-shaped node.
 
-### ⛔️ DECISION POINT — dead or empty wiring
+### Record, do not delete yet
 
 Cloud graphs routinely carry nodes that are **not connected to anything**, or connected
-but never given a value. Do not delete them on your own initiative — **ask**:
+but never given a value. List them and **carry them to Phase 4**.
 
-> "Node #93 points at a cloud video and has no outgoing link. Nodes #37–#42 are
-> `LoadImage` with no image selected, wired into reference slots 3–8. Remove them for
-> cleanliness, or mute and keep them so the structure stays visible?"
-
-Default to **mute (`mode: 2`)** rather than delete — it keeps the author's structure
-visible while stopping it from blocking the run. Deleting loses information about how
-the author intended the graph to scale.
+When reported, recommend **mute (`mode: 2`)** over delete - it keeps the author's
+structure visible while stopping it from blocking the run, and deleting loses
+information about how the author intended the graph to scale. But the choice is theirs.
 
 ---
 
-## Phase 4 — Swapping nodes: four things, not two
+## Phase 4 - One report, one decision
+
+The survey is done and **nothing has been changed yet**. Put everything in front of the
+user at once, and let them choose what to act on.
+
+### Report every gap in the same shape
+
+```
+what is missing      exact name, where the workflow references it, what it does
+is it out there      found at <source>, size N GB  /  neither search route found it
+what is here now     already local / behind by N commits / not present at all
+options              A, B, C - with what each costs
+risk to your setup   <- the column people actually decide on
+```
+
+### Rank the options by what they touch
+
+Not all fixes are the same size of decision. Say which is which:
+
+| Risk | What it touches | Examples |
+|---|---|---|
+| **None** | nothing existing | swap to a built-in equivalent - edit the workflow copy - mute dead nodes |
+| **Low** | disk and time only | download a model or LoRA: adds files, changes nothing that already runs |
+| **Medium** | adds a dependency | install a new custom-node package: may conflict, needs maintaining forever |
+| **HIGH** | **changes what already works** | update an installed package - update the host application itself - replace a model other workflows share |
+
+**The high-risk row deserves its own sentence in the report.** If the user has pipelines
+currently running on that package, an update can silently change their output. Say so
+explicitly, and say what would have to be re-verified afterwards.
+
+### Let them answer piece by piece
+
+Present the gaps as a list they can answer selectively, not as one all-or-nothing
+question. A realistic answer is "download those two, skip the package update, I will
+find the third one myself" - and the procedure must be able to continue from there.
+
+Also offer the option nobody offers: **do none of it**. Knowing a workflow needs a 20 GB
+download and a risky package update is sometimes enough to decide it is not worth
+landing at all. That is a successful outcome for this phase, not a failure.
+
+### Then act only on what was agreed
+
+Downloads, installs, updates - only the ones chosen. Verify each download by header (see
+Phase 2). If a package was updated, **check that the nodes you already depend on still
+exist afterwards**; do not take cumulative-update claims on faith.
+
+---
+
+## Phase 5 - Converting: swapping a node means four things, not two
 
 🚨 The failure everyone hits: change `type` and `widgets_values`, then stop. Links
 attach by **slot index**, so nothing breaks visually — no red box, no empty dropdown,
@@ -263,7 +316,7 @@ Also update `properties["Node name for S&R"]`, and mark built-ins as core.
 
 ---
 
-## Phase 5 — Verify in three layers. Each catches what the previous cannot.
+## Phase 5b - Verify in three layers. Each catches what the previous cannot.
 
 ```
 ① Programmatic check   nodes / model filenames / asset files / numeric ranges
