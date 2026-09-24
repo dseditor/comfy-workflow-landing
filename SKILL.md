@@ -150,6 +150,33 @@ Scan `/object_info` for `display_name == <the missing type>`. If a built-in matc
 ⚠️ And scan the *whole* table. `custom_nodes/` is not the whole table — built-ins live
 in `comfy_extras/`. Reporting a built-in as missing is the most common false alarm.
 
+### 🚨 Some nodes are frontend-only and are invisible to `/object_info`
+
+A few packages register nodes **purely in JavaScript**, through LiteGraph on the
+frontend. They have no Python class, no entry in the backend schema, and therefore
+**cannot appear in `/object_info` even when the package is installed and working**.
+
+```
+rgthree   Fast Groups Bypasser (rgthree) / Fast Groups Muter (rgthree) / Label (rgthree) ...
+          registered in web/comfyui/constants.js, not in any .py
+```
+
+Any check that reads only `/object_info` reports this entire class of node as missing.
+The installed-package scan has to look at the package's **JS** as well:
+
+```bash
+grep -rn "<node name>" <custom_nodes>/*/web/ --include=*.js
+```
+
+⚠️ And the name may be **assembled**, not written out. rgthree builds every title with
+`addRgthree(str) => str + " (rgthree)"`, so grepping the workflow's literal type string
+`Fast Groups Bypasser (rgthree)` finds nothing — the source only contains
+`addRgthree("Fast Groups Bypasser")`. Search for the stem, not the full title.
+
+📌 These nodes are usually UI conveniences (group togglers, labels, bookmarks). That
+makes the false alarm doubly wasteful: you would be installing a package you already
+have, in order to satisfy a node that does not affect the output at all.
+
 ### 🚨 Registration styles differ — one grep pattern is not enough
 
 ```
@@ -627,6 +654,8 @@ this is the effect you wanted — take a look."**
 | Assuming `widgets_values` is a list | dict-shaped nodes skipped silently |
 | Reading a widget that has a link | wrong duration and wrong prompt reported with confidence |
 | Swapping type without renaming input slots | loads clean, submits clean, **dies on execute** |
+| Trusting `object_info` for frontend-only (JS) nodes | an installed UI node reported as missing |
+| Searching a hub API for a filename | the file is there, inside a repo whose name shares no word with it |
 
 📌 Most of these produce the same symptom: **a list of things that are not actually
 missing.** Act on such a list and you will download files you already have, install
