@@ -37,43 +37,49 @@ that never appear anywhere in the JSON.
 So state the cost plainly — packages, downloads, unrecoverable assets — and stop there.
 Listing "do none of it" among the options is right. **Recommending it is not.**
 
-📌 The same rule as the acceptance standard in Phase 6, arriving earlier: you can measure
+📌 The same rule as the acceptance standard in Stage 5, arriving earlier: you can measure
 what something costs; you cannot measure what it is worth to them.
 
 ---
 
-## The shape of the job: survey read-only, then one decision
+## The shape of the job: inventory, then search, then run
+
+Two surveys, not one. They are separated because they cost different amounts and answer
+different questions — and because merging them buries the user in one huge report.
 
 ```
-SURVEY   Phase 0-3    read the prompt / audit nodes / locate models / check assets
-                      change nothing, download nothing, ask nothing yet
-  |
-  +-- nothing missing ------------------------------->  Phase 5 convert & verify
-  |                                                      ZERO questions asked
-  |
-  +-- gaps found --->  Phase 4  ONE report, ONE decision
-                       every gap, what exists where, the options, and the RISK
-                       the user picks which to act on - possibly none
-                            |
-                            +------------------------->  Phase 5 convert & verify
+STAGE 1  INVENTORY   read the prompt - compare the graph against this machine
+                     seconds. purely local. no searching, no downloading
+                          |
+                          +--> a list: HAVE / MISSING / NOT SURE (+ an HTML copy)
+                          +--> ask ONE thing:  "shall I go look for the missing ones?"
+
+STAGE 2  SEARCH      only what Stage 1 could not find, and only if they said yes
+                     API round settles most of it; web round mops up
+                          |
+                          +--> update the list: FOUND (size, source) / NOWHERE
+                          +--> now, with real sizes and real risks, ask what to act on
+
+STAGE 3  APPLY       download / install / convert - only what was agreed
+STAGE 4  VERIFY      programmatic -> browser -> press Queue
+STAGE 5  HAND OVER   compare the output against the prompt; give the judgement back
 ```
 
-**Survey completely before asking anything.** Do not stop at the first missing node to
-ask, then stop again at the first missing model. That interrupts the user three times
-and each time they see only a fragment. Finish the whole survey, then present everything
-at once: seeing all the gaps together, a user may act on two and drop the rest, or
-abandon the workflow entirely. They cannot make that judgement one gap at a time.
+**Stage 1 must be fast and must not search.** Its job is only: does this machine have
+it, or not. "Can this be found on the internet" is a different, slower question, and
+asking it too early turns a five-second inventory into a long wait before the user has
+seen anything.
 
-**The survey is read-only.** No downloads, no installs, no edits to the JSON until the
-user has decided. Downloading 20 GB before asking is not helpfulness; it removes their
-choice.
+**Two small questions, not one large one.** Stage 1 ends with a yes/no a user can answer
+without thinking hard. Stage 2 ends with a pick-list, by which point they have real
+sizes and real risks in front of them. Never combine them into one wall of options.
 
-**Do not manufacture decisions.** A workflow that lands with zero questions is the best
-outcome, not a sign you skipped something. Ask only about gaps the survey actually found.
+**If Stage 1 comes back with nothing missing, skip straight to Stage 4 and run it.**
+No questions at all.
 
 ---
 
-## Phase 0 — Read the prompt first. It is the spec.
+## Stage 1a — Read the prompt first. It is the spec.
 
 **Before touching nodes, read every text widget in the graph.** The prompt tells you
 things the graph cannot:
@@ -99,7 +105,7 @@ the wrong everything.
 
 ---
 
-## Phase 1 — Nodes: four layers, in this order
+## Stage 1b — Nodes: four layers, checked against this machine only
 
 For every node type in the graph, ask in order:
 
@@ -168,7 +174,7 @@ ones they are, and that the workflow needs structural replacement, not a downloa
 ### Record, do not ask yet
 
 For each node that is not simply present, record which bucket it falls in and what the
-options are. **Carry it to Phase 4** - do not stop the survey to ask.
+options are. **Carry it to the Stage 1 list** - do not stop the survey to ask.
 
 An exact built-in equivalent is the one case you may act on without asking: swapping a
 third-party `Float` for the built-in `Float` changes nothing the user would want a say
@@ -177,7 +183,89 @@ goes into the report.
 
 ---
 
-## Phase 2 — Models: a three-tier search, then hand back
+## Stage 1c — Assets and dead wiring
+
+Cloud workflows carry the author's uploads as hash filenames. **These are
+unrecoverable.**
+
+🚨 **Do not check assets against `/object_info`.** Those dropdowns are populated by the
+frontend from the input directory and are not in the static schema — a cloud video will
+sail straight through a checker that only reads `object_info`. **Check the filesystem
+directly.**
+
+⚠️ `widgets_values` has **two shapes**: a list for most nodes, a **dict** for some video
+helper families. A checker doing `if not isinstance(w, list): continue` silently skips
+every dict-shaped node.
+
+### Record, do not delete yet
+
+Cloud graphs routinely carry nodes that are **not connected to anything**, or connected
+but never given a value. List them and **carry them to the Stage 1 list**.
+
+When reported, recommend **mute (`mode: 2`)** over delete - it keeps the author's
+structure visible while stopping it from blocking the run, and deleting loses
+information about how the author intended the graph to scale. But the choice is theirs.
+
+---
+
+## Stage 1d — What Stage 1 hands over, and the first question
+
+Put everything in one list with a status per item. Use four states, and **keep the
+uncertain ones visibly uncertain** — do not round them up or down:
+
+```
+HAVE        present on this machine right now
+MISSING     definitely not here
+NOT SURE    referenced by a name this machine cannot resolve - may exist elsewhere
+            under a different name, may be a renamed registration, may be nothing
+IN REGISTRY for nodes: not installed, but the node index says which package ships it
+```
+
+For nodes, check the node registry as part of Stage 1 — it is a local lookup, not a
+search. Being able to say "this one comes from package X" turns an unknown into a known
+cost before anyone has gone looking for anything.
+
+### Say which branch each gap is on
+
+Before listing anything, trace backwards from every output node (`Save*`, `Preview*`)
+and record which nodes each one can reach. ComfyUI only executes nodes that feed an
+output, so a graph with two output nodes is often **two independent pipelines sharing a
+canvas** — and a gap that blocks one of them may not touch the other at all.
+
+```
+branch A  -> SaveVideo #92, SaveImage #161     28 nodes,  3 missing
+branch B  -> SaveImagesToZip #173              26 nodes, 18 missing
+```
+
+That single line changes the shape of the whole job: without it, "25 items missing"
+reads as one impassable wall. With it, the user can see that one half of the graph is
+nearly ready and the other half is where the cost is. **This is structure, not opinion**
+— you are reporting how the author wired it, not which half is worth having.
+
+📌 It also tells you which gaps are real. A missing model on a branch nothing reaches is
+a loose end, not a blocker.
+
+Write the list **as an HTML file as well** (see the HTML section below) and give the
+path. A status list with four states and twenty rows is exactly the thing a terminal
+renders badly and a phone renders worse.
+
+Then ask **one** question:
+
+> "Nothing here yet has been downloaded or changed. N items are missing and M are
+> uncertain — shall I go and look for them?"
+
+That is the whole question. Not a menu, not a risk table, not a recommendation. Sizes
+and risks do not exist yet, because nothing has been located yet — presenting options
+now would mean inventing the numbers behind them.
+
+⚠️ **And do not editorialise about the workflow itself.** Techniques you believe are
+obsolete, authors you do not rate, approaches you would not choose — none of that
+belongs in an inventory. The user may want exactly this effect, may be studying this
+author, or may know something about the technique that you do not.
+
+---
+
+## Stage 2 — Searching for what Stage 1 could not find
 
 ```
 ① API            one call per filename, and it settles roughly 80% of them outright
@@ -225,7 +313,7 @@ Read `__metadata__` too: a base-model field confirms the file is even for this m
 Locating a file is survey work. **Fetching it is not** - that is the user's call,
 because it costs their bandwidth, their disk and sometimes their money. Record for each
 missing model: the exact filename, where it was found (or that neither route found it),
-the file size, and the nearest alternatives. **Carry it to Phase 4.**
+the file size, and the nearest alternatives. **Carry it to the Stage 1 list.**
 
 When you do report it, give the user the facts and the options:
 
@@ -246,32 +334,7 @@ the exact folder.** Read them before guessing.
 
 ---
 
-## Phase 3 — Assets and dead wiring
-
-Cloud workflows carry the author's uploads as hash filenames. **These are
-unrecoverable.**
-
-🚨 **Do not check assets against `/object_info`.** Those dropdowns are populated by the
-frontend from the input directory and are not in the static schema — a cloud video will
-sail straight through a checker that only reads `object_info`. **Check the filesystem
-directly.**
-
-⚠️ `widgets_values` has **two shapes**: a list for most nodes, a **dict** for some video
-helper families. A checker doing `if not isinstance(w, list): continue` silently skips
-every dict-shaped node.
-
-### Record, do not delete yet
-
-Cloud graphs routinely carry nodes that are **not connected to anything**, or connected
-but never given a value. List them and **carry them to Phase 4**.
-
-When reported, recommend **mute (`mode: 2`)** over delete - it keeps the author's
-structure visible while stopping it from blocking the run, and deleting loses
-information about how the author intended the graph to scale. But the choice is theirs.
-
----
-
-## Phase 4 - One report, one decision
+## Stage 2b - The second question: what do you want done
 
 The survey is done and **nothing has been changed yet**. Put everything in front of the
 user at once, and let them choose what to act on.
@@ -404,7 +467,7 @@ exist afterwards**; do not take cumulative-update claims on faith.
 
 ---
 
-## Phase 5 - Converting: swapping a node means four things, not two
+## Stage 3 - Converting: swapping a node means four things, not two
 
 🚨 The failure everyone hits: change `type` and `widgets_values`, then stop. Links
 attach by **slot index**, so nothing breaks visually — no red box, no empty dropdown,
@@ -429,7 +492,7 @@ Also update `properties["Node name for S&R"]`, and mark built-ins as core.
 
 ---
 
-## Phase 5b - Verify in three layers. Each catches what the previous cannot.
+## Stage 4 - Verify in three layers. Each catches what the previous cannot.
 
 ```
 ① Programmatic check   nodes / model filenames / asset files / numeric ranges
@@ -473,7 +536,7 @@ downstream of it is stale.
 
 ---
 
-## Phase 6 — Acceptance: separate what you can judge from what you cannot
+## Stage 5 — Acceptance: separate what you can judge from what you cannot
 
 🚨 **Running to completion is not success.** Two different questions get confused here,
 and only one of them is yours:

@@ -56,32 +56,40 @@ Nothing to install. Start a project and drop `SKILL.md` into it.
 
 ## What actually happens after you hand over a workflow
 
-Landing a workflow is **a survey, then at most one conversation, then a run.**
+Landing a workflow is **an inventory, then at most two questions, then a run.**
 
 ```
-SURVEY  (Phase 0-3)     reads everything, changes nothing, downloads nothing
-  |
-  +-- nothing missing ------------------------->  convert & verify.  NO questions asked
-  |
-  +-- gaps found --->  ONE report, ONE decision (Phase 4)
-                       every gap, what exists where, the options, the RISK
-                       you pick what to act on - possibly none
-                            |
-                            +------------------>  convert & verify
+STAGE 1  INVENTORY   read the prompt -> compare the graph against this machine
+                     seconds. purely local. nothing searched, nothing downloaded
+                        |
+                        +-> a status list: HAVE / MISSING / NOT SURE (+ an HTML copy)
+                        +-> ONE question: "shall I go and look for the missing ones?"
+                                |
+                 nothing missing +->  convert & verify. NO questions asked
+                                |
+STAGE 2  SEARCH      only the gaps, and only if you said yes
+                     sizes and sources now exist -> ONE decision, with the RISK column
+                                |
+STAGE 3-5            convert -> verify in three layers -> hand back for acceptance
 ```
 
-**The survey is read-only and it asks you nothing.** It does not stop at the first
-missing node, ask, then stop again at the first missing model. It finishes, then puts
-everything in front of you at once — because seeing all the gaps together is what lets
-you say "do those two, skip the rest". You cannot make that call one gap at a time.
+**Stage 1 is read-only and asks you nothing until it is finished.** It does not stop at
+the first missing node to ask, then stop again at the first missing model. It finishes,
+then puts the whole list in front of you at once.
+
+**The two questions are deliberately different sizes.** The first is a yes/no — *shall I
+go and look?* — because at that moment nobody knows how big anything is. The second is
+the real decision, and it only becomes answerable **after** the search: file sizes,
+sources and risks are things that exist only by then.
 
 **Nothing is downloaded or installed before you agree.** A 20 GB model does not start
 transferring because an agent decided it would be helpful.
 
-So read the phases below as *"if this comes up"*, not *"this will happen"*. **A workflow
-that lands with zero questions asked is the normal good case.**
+**And the inventory does not grade the workflow.** Whether a technique is dated, or an
+approach is one the agent would not have chosen, is not its call — you may want exactly
+that effect, or know something about it that it does not. It reports what is there.
 
-### Phase 0 · Read the prompt  ·  *seconds*
+### Stage 1a · Read the prompt  ·  *seconds*
 
 The agent reads every text widget before touching anything. You get told:
 
@@ -90,41 +98,85 @@ The agent reads every text widget before touching anything. You get told:
 - whether the prompt was written for **this** model, or carried over from another one
 - whether the requested duration and shot count are achievable on this graph
 
-📌 This is also where you find out that a 30-second prompt is going to be compressed
-into whatever the graph actually produces — **before** you spend GPU time on it.
+🚨 **Widget values on inputs that have a link are stale history, not live values.** Read
+the wire, not the widget — this is the fastest way to report the wrong duration, the
+wrong prompt, the wrong everything.
 
-### Phase 1 · Node audit  ·  *a minute*
+### Stage 1b · Node audit  ·  *a minute*
 
 Every node type is checked against four layers: **built-in → installed package →
-package behind upstream → genuinely absent.** You get a list sorted into those buckets,
-with platform-locked nodes (`RH_*`, encrypted) flagged as **cannot be landed at all**.
+package behind upstream → genuinely absent**, with platform-locked nodes (`RH_*`,
+encrypted) flagged as **cannot be landed at all**.
 
-> 📋 Anything not simply present is **recorded and carried to Phase 4** — the survey does
-> not stop to ask. The one exception it may act on alone is an exact built-in equivalent,
-> because swapping a third-party `Float` for the built-in `Float` changes nothing you
-> would want a say in.
+> 📋 This stage compares **against this machine only**. Anything it cannot resolve is
+> marked *not sure* — guessing where it lives is Stage 2's job, not this one's.
 
-### Phase 2 · Locate the models (find, do not fetch)  ·  *minutes*
-
-For each missing model or LoRA: API search → web search → hand back. Everything
-downloaded is verified by reading the `safetensors` header, not by file size.
-
-> 📋 **Locating a file is survey work; fetching it is not.** Nothing downloads at this
-> stage. You get the filename, the size, where it was found — or that neither route
-> found it — and the nearest candidates, all in the Phase 4 report.
-
-### Phase 3 · Assets and dead wiring  ·  *a minute*
+### Stage 1c · Assets and dead wiring  ·  *a minute*
 
 The author's uploaded images and videos arrive as hash filenames and **cannot be
-recovered**. You supply substitutes — matched to the roles Phase 0 identified.
+recovered**. You supply substitutes, matched to the roles Stage 1a identified. Cloud
+graphs routinely carry unconnected nodes and empty loaders; they are **listed, not
+deleted** — they often show how the author intended the graph to scale.
 
-> 📋 Cloud graphs usually carry unconnected nodes and empty loaders. They are listed,
-> not deleted — they often show how the author intended the graph to scale. The
-> recommendation will be to mute rather than remove, but it goes in the report.
+### Stage 1d · One list, one question  ·  *the first time you are asked anything*
 
-### Phase 4 · One report, one decision  ·  *only if the survey found gaps*
+```
+HAVE         present on this machine right now
+MISSING      definitely not here
+NOT SURE     this machine cannot resolve the name - may exist elsewhere, may be nothing
+IN REGISTRY  not installed, but the node index names the package that ships it
+```
 
-Everything the survey found arrives at once, in one shape per gap:
+It also traces backwards from every output node, so you are told **which branch each gap
+is on**:
+
+```
+branch A -> SaveVideo #92, SaveImage #161     28 nodes,  3 missing
+branch B -> SaveImagesToZip #173              26 nodes, 18 missing
+```
+
+ComfyUI only executes nodes that feed an output, so a graph with two output nodes is
+often **two independent pipelines sharing a canvas**. Without that line, "25 items
+missing" reads as one impassable wall; with it, you can see that half the graph is
+nearly ready.
+
+The list is **also written as an HTML file** and you get the path — a four-state,
+twenty-row list is exactly what a terminal renders badly and a phone renders worse.
+
+Then one question:
+
+> "Nothing has been downloaded or changed. N items are missing and M are uncertain —
+> shall I go and look for them?"
+
+That is the whole question. Not a menu, not a risk table, not a recommendation. **Sizes
+and risks do not exist yet**, because nothing has been located yet.
+
+### Stage 2 · Search  ·  *minutes, and only if you said yes*
+
+Only the things Stage 1 could not find, in three tiers:
+
+```
+① API search    fastest. A hub's search endpoint usually matches the REPO NAME only
+                -> blind to a file sitting inside someone's unrelated grab-bag repo
+② web search    search engines crawl the hub's file-listing pages, so the FILENAME
+                is in that index even when it is not in the API's
+③ report "neither route found it"   <- NOT "it does not exist"
+```
+
+**One round settles it.** The API pass alone typically confirms around 80% of a list,
+and one web pass takes it as far as it goes — there is no value in cycling through
+keyword variations. Not found is a handover, not a cue to dig further.
+
+🚨 "My channel didn't find it" ≠ "it doesn't exist". The second sentence sounds like a
+fact about the world; it is only a fact about your coverage — and it removes the one
+person who might know where the file lives.
+
+**Still nothing is downloaded.** Locating a file is survey work; fetching it costs your
+bandwidth, your disk and sometimes your money.
+
+### Stage 2b · One report, one decision  ·  *only if there really are gaps*
+
+Everything the search found arrives at once, in one shape per gap:
 
 ```
 what is missing      exact name, where it is referenced, what it does
@@ -153,7 +205,7 @@ the third myself" is a normal answer. So is **"do none of it"**: knowing a workf
 
 #### Reading it on a phone, or in a terminal
 
-A survey report is four or five columns per gap. In a terminal it wraps into mush; on a
+A gap report is four or five columns per gap. In a terminal it wraps into mush; on a
 phone it is worse. So the report can also be written as **a single self-contained HTML
 file** — no CDN, no network, opens offline, one card per gap, risk shown as both colour
 and words.
@@ -171,13 +223,13 @@ Without that button the file solves reading and leaves you typing a paragraph on
 keyboard. **The plain-text summary stays in the chat either way** — opening a file is
 never required in order to answer.
 
-### Phase 5 · Convert  ·  *seconds*
+### Stage 3 · Convert  ·  *seconds*
 
 A landed copy of the JSON is written — nodes swapped, values repointed, substitutes
 wired in, dead nodes muted. **Your original file is never modified.** You get a count of
 every change made.
 
-### Phase 5b · Verify in three layers  ·  *minutes, plus one generation*
+### Stage 4 · Verify in three layers  ·  *minutes, plus one generation*
 
 ```
 ① programmatic check   nodes, model filenames, asset files, numeric ranges
@@ -188,7 +240,7 @@ every change made.
 Each layer finds what the previous one could not. Expect the agent to go back and fix
 things twice here — that is the procedure working, not failing.
 
-### Phase 6 · Acceptance  ·  *yours*
+### Stage 5 · Acceptance  ·  *yours*
 
 You get the output, plus a line-by-line comparison against the prompt **in counts, not
 adjectives**: "the prompt names 5 actions; 3 are identifiable on screen."
@@ -213,7 +265,7 @@ an honest report           including the parts the agent could not judge
 
 For a 67-node workflow with a 15-LoRA chain, the audit and conversion took about
 **twenty minutes of back-and-forth**; the bulk of the wall-clock time was a 19.5 GB base
-model download and the generation itself. **The three decision points were the only
+model download and the generation itself. **The two question points were the only
 moments a human was needed.**
 
 ---
