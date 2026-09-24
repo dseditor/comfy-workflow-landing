@@ -18,6 +18,30 @@ different piece of work, and the user should know that before they judge the out
 
 ---
 
+## Report what it is. Do not rule on whether it is worth doing.
+
+The user asked what this workflow is and what it needs. That is the deliverable.
+
+```
+YOURS      what the graph does, what it needs, what is missing, what each fix touches
+NOT YOURS  whether it is worth landing
+```
+
+**"I would not bother with this one" is not a finding, it is an opinion** — and it rests
+on knowledge you do not have. Whether a workflow is worth the trouble depends on what
+the user already knows about these techniques, what they are trying to learn, whether
+the author is someone they follow, and what else they have running. A user with domain
+experience may take one look at your inventory and dismiss it in a second, for reasons
+that never appear anywhere in the JSON.
+
+So state the cost plainly — packages, downloads, unrecoverable assets — and stop there.
+Listing "do none of it" among the options is right. **Recommending it is not.**
+
+📌 The same rule as the acceptance standard in Phase 6, arriving earlier: you can measure
+what something costs; you cannot measure what it is worth to them.
+
+---
+
 ## The shape of the job: survey read-only, then one decision
 
 ```
@@ -156,13 +180,17 @@ goes into the report.
 ## Phase 2 — Models: a three-tier search, then hand back
 
 ```
-① API            fastest. A model-hub search endpoint usually matches the REPO NAME
-                 only → blind to a file sitting inside an unrelated grab-bag repo
-② Web search     search engines have crawled the hub's file-listing pages, so the
-                 FILENAME is in that index even when it is not in the API's
+① API            one call per filename, and it settles roughly 80% of them outright
+② Web search     only for what the API missed — filenames sitting in unrelated
+                 grab-bag repos are invisible to a name-matching API but indexed by
+                 search engines, which crawl the file-listing pages
 ③ Report "neither route found it"   ← NOT "it does not exist"
                  hand back to the human, who knows the community map
 ```
+
+📌 **This is fast. Do not describe it as expensive.** One API round decides most of the
+list; the web round mops up the remainder. A survey of twenty models is minutes, not an
+afternoon — and misjudging that cost will make you frame a workable job as a burden.
 
 **Query with the exact filename.** Do not translate it into a description:
 
@@ -279,9 +307,13 @@ Present the gaps as a list they can answer selectively, not as one all-or-nothin
 question. A realistic answer is "download those two, skip the package update, I will
 find the third one myself" - and the procedure must be able to continue from there.
 
-Also offer the option nobody offers: **do none of it**. Knowing a workflow needs a 20 GB
-download and a risky package update is sometimes enough to decide it is not worth
-landing at all. That is a successful outcome for this phase, not a failure.
+Include the option nobody lists: **do none of it**. Put it on the menu with the same
+neutrality as the others — a user who decides a workflow is not worth the packages it
+needs has used this phase correctly, and the phase succeeded.
+
+⚠️ **List it; do not argue for it.** The moment you write "I suggest we skip this one",
+you have moved from surveying to deciding, and you are deciding with far less context
+than they have.
 
 ### Offer an HTML copy of the report
 
@@ -512,7 +544,8 @@ this is the effect you wanted — take a look."**
 ⚠️ Substituted      K things were swapped — it runs, but this is NOT the author's result
                     list each: what was swapped, why, and how it differs
 ⛔️ Your call        J decisions I am not making for you: <options and their costs>
-❓ Beyond my judgement   whether this achieves the intended effect — I have no standard; please look
+❓ Beyond my judgement   whether this achieves the intended effect, and whether it is
+                    worth landing at all — both are yours, not mine
 🚫 Cannot be landed  platform-locked nodes / weights the author never published — say why
 ```
 
