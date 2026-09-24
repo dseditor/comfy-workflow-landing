@@ -40,6 +40,18 @@ Listing "do none of it" among the options is right. **Recommending it is not.**
 📌 The same rule as the acceptance standard in Stage 5, arriving earlier: you can measure
 what something costs; you cannot measure what it is worth to them.
 
+### The same neutrality applies to the subject matter
+
+An inventory is a technical statement about files and wiring. What the workflow depicts
+is not part of it, and a landing procedure that behaves differently depending on the
+subject is not a landing procedure — it is a filter the user did not ask for.
+
+📌 This matters practically, not just in principle: **the subject is often the reason a
+file is hard to find.** Gated categories are absent from public search indexes; nodes
+that exist to route around a hosted service's policy look exactly like missing
+dependencies. If you shy away from naming what you are looking at, you will misdiagnose
+both — and report a coverage limit as if it were a fact about the file.
+
 ---
 
 ## The shape of the job: inventory, then search, then run
@@ -188,6 +200,31 @@ Grepping only for `NODE_CLASS_MAPPINGS` against a package using the new API retu
 nothing, and you will conclude "not registered" about nodes that are sitting right
 there. Scan class definitions too.
 
+### Two kinds of node exist because of the hosting platform, not the work
+
+```
+platform-locked    runs ONLY on that platform      -> CANNOT be landed
+policy-workaround  exists ONLY to fight a platform -> DOES NOT NEED to be landed
+```
+
+The first kind is obvious: `RH_*` prefixes, encrypted or licence-gated nodes. Say
+plainly that the workflow needs structural replacement, not a download.
+
+The second kind is easy to miss, because in an inventory it looks identical to a genuine
+gap — a node name, not installed, not found anywhere. But some nodes exist to work
+around a **hosted service's content policy**: obfuscating a payload, encoding and
+decoding around a filter, hiding an intermediate result. On a local install there is no
+such filter, so the node has **no job to do here**.
+
+📌 **Do not report it as a gap to be filled. Report it as a node that can be dropped, and
+say why.** Otherwise the user goes looking for something that would change nothing if
+they found it — and the graph stays blocked on a requirement that only ever existed
+somewhere else.
+
+⚠️ You will not always recognise one. If a node's purpose is unclear and neither search
+route finds it, **say that it is unclear** and let the user tell you — they usually know
+what the original platform was and what it restricted.
+
 ### Flag platform-locked nodes explicitly
 
 ```
@@ -313,6 +350,28 @@ afternoon — and misjudging that cost will make you frame a workable job as a b
 ✅  Some_Model_V2          ❌  some model lora v2
 underscores, version numbers and case all preserved
 ```
+
+### Why a search misses things — it is rarely the keyword
+
+When a filename cannot be found, the reflex is to blame the query and try another
+wording. Usually the reason is structural, and no wording fixes it:
+
+```
+the repo name shares no word with the file   an API search matches repo names -> blind
+the file sits behind a gate                  gated, age-restricted or login-only pages
+                                             are NOT in a public search index at all
+the file was never published                 a private training run, or a share that
+                                             only ever circulated in a chat
+```
+
+📌 **The middle row produces the most confident wrong conclusion.** Those files exist,
+they are downloadable, people use them daily — and both of your routes are structurally
+incapable of seeing them. If you then explain the absence with something plausible about
+the filenames, you have written a diagnosis that is really the symptom restated, and the
+user has no reason to correct you.
+
+So report **that** both routes came back empty, not **why** you think they did.
+Speculating about the cause is how a coverage limit gets recorded as a fact.
 
 🚨 **"My channel didn't find it" ≠ "it doesn't exist".** Saying the second closes the
 door on the human's knowledge — and they are often the one who knows the file lives in
