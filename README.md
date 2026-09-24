@@ -151,6 +151,26 @@ You answer **selectively** — "download those two, skip the package update, I w
 the third myself" is a normal answer. So is **"do none of it"**: knowing a workflow needs
 20 GB and a risky update is sometimes enough to decide it is not worth landing.
 
+#### Reading it on a phone, or in a terminal
+
+A survey report is four or five columns per gap. In a terminal it wraps into mush; on a
+phone it is worse. So the report can also be written as **a single self-contained HTML
+file** — no CDN, no network, opens offline, one card per gap, risk shown as both colour
+and words.
+
+The part that actually matters: it ends with a **Copy my decisions** button that turns
+your selections into one line of text to paste back into the chat.
+
+```
+[ Copy my decisions ]  ->  "unet: download nearest (19.5 GB)
+                            package: skip the update
+                            lora_3: I will find it myself"
+```
+
+Without that button the file solves reading and leaves you typing a paragraph on a phone
+keyboard. **The plain-text summary stays in the chat either way** — opening a file is
+never required in order to answer.
+
 ### Phase 5 · Convert  ·  *seconds*
 
 A landed copy of the JSON is written — nodes swapped, values repointed, substitutes

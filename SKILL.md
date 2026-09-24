@@ -283,6 +283,87 @@ Also offer the option nobody offers: **do none of it**. Knowing a workflow needs
 download and a risky package update is sometimes enough to decide it is not worth
 landing at all. That is a successful outcome for this phase, not a failure.
 
+### Offer an HTML copy of the report
+
+A survey report is a wide table with four or five columns per gap. **In a terminal it
+wraps into mush, and on a phone it is unreadable.** When the report has more than a
+couple of gaps — or whenever the user is working from a CLI or a phone — also write it
+as a single HTML file and give them the path.
+
+**What the file must be:**
+
+```
+one file, no external anything     no CDN, no fonts, no network - it has to open offline
+responsive, phone first             the user is often checking this away from the desk
+one card per gap                    not one giant table; cards stack on a narrow screen
+risk shown as colour AND text       colour alone fails for colour-blind users and for print
+options as radio buttons            including "skip this one" as an explicit choice
+```
+
+**And the part that makes it worth building:** a button that turns the selections into
+a line of text the user can paste straight back into the chat.
+
+```
+[ Copy my decisions ]  ->  "download: A, C   skip: B   update package: no   I will find: D"
+```
+
+Without that, you have solved reading and left them typing a paragraph on a phone
+keyboard. The HTML has to close the loop, not just open it.
+
+**Sketch — adapt, do not copy verbatim:**
+
+```html
+<!DOCTYPE html><html lang="zh-Hant"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+ body{font:16px/1.6 system-ui,sans-serif;margin:0;padding:16px;background:#f6f7f9;color:#1a1a1a}
+ .gap{background:#fff;border-radius:10px;padding:14px;margin:0 0 14px;box-shadow:0 1px 3px #0002}
+ .risk{display:inline-block;padding:2px 10px;border-radius:99px;font-size:13px;font-weight:600}
+ .r-none{background:#eceff1;color:#37474f}   .r-low{background:#e8f5e9;color:#1b5e20}
+ .r-med {background:#fff8e1;color:#e65100}   .r-high{background:#ffebee;color:#b71c1c}
+ .facts{font-size:14px;color:#555;margin:8px 0}
+ .facts b{color:#1a1a1a;font-weight:600}
+ label{display:block;padding:7px 0;border-top:1px solid #eee}
+ button{width:100%;padding:14px;font-size:17px;border:0;border-radius:10px;
+        background:#1a73e8;color:#fff;font-weight:600}
+ #out{white-space:pre-wrap;background:#fff;border-radius:10px;padding:12px;margin-top:12px;
+      font:14px/1.5 ui-monospace,monospace}
+</style>
+<h2>Landing report - <span id="wf"></span></h2>
+<p class="facts">N gaps found. Nothing has been downloaded or changed yet.</p>
+
+<div class="gap" data-id="unet">
+  <div><b>minimax_h3_...b25-49-int8_r.safetensors</b> <span class="risk r-low">Low risk</span></div>
+  <div class="facts">
+    Referenced by: <b>UNETLoader #4</b><br>
+    Out there: <b>not found with this exact suffix</b>; nearest is the same merge range
+    without <code>_r</code>, 19.5 GB<br>
+    Here now: <b>not present</b>
+  </div>
+  <label><input type="radio" name="unet" value="download nearest (19.5 GB)"> Download the nearest (19.5 GB)</label>
+  <label><input type="radio" name="unet" value="skip" checked> Skip - I will supply it myself</label>
+</div>
+
+<button onclick="collect()">Copy my decisions</button>
+<div id="out"></div>
+<script>
+function collect(){
+  let lines=[];
+  document.querySelectorAll('.gap').forEach(g=>{
+    const c=g.querySelector('input:checked');
+    lines.push(g.dataset.id+': '+(c?c.value:'(no answer)'));
+  });
+  const t=lines.join('\n');
+  document.getElementById('out').textContent=t;
+  navigator.clipboard&&navigator.clipboard.writeText(t);
+}
+</script>
+```
+
+📌 Keep the plain-text summary in the conversation as well. The HTML is for reading
+comfortably; the chat is still where the decision gets made and recorded. Never make
+opening a file mandatory in order to answer you.
+
 ### Then act only on what was agreed
 
 Downloads, installs, updates - only the ones chosen. Verify each download by header (see
